@@ -1,0 +1,9 @@
+﻿################################################################################
+# This .gitignore file was automatically created by Microsoft(R) Visual Studio.
+################################################################################
+
+/MadLab.QueryFilter.Demo.Console/bin/Debug/net8.0
+/MadLab.QueryFilter.Demo.Console/obj
+/MadLab.QueryFilter.Domain/bin/Debug/net8.0
+/MadLab.QueryFilter.Domain/obj
+/.vs/MadLab.QueryFilter/v17
