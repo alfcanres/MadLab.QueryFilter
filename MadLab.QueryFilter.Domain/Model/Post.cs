@@ -10,8 +10,8 @@ namespace MadLab.QueryFilter.Domain
     public class Post
     {
         public int Id { get; set; }
-        public int ApplicationUserInfoId { set; get; }
-        public User ApplicationUserInfo { get; set; }
+        public int AuthorId { set; get; }
+        public User Author { get; set; }
 
         public int PostTypeId { get; set; }
         [Required]

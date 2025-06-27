@@ -120,11 +120,11 @@ namespace MadLab.QueryFilter.Domain
                 appDbContext.Posts.Add(new Post
                 {
                     Title = postTitle,
-                    ApplicationUserInfoId = randomUser.Id,
-                    ApplicationUserInfo = randomUser,
+                    AuthorId = randomUser.Id,
+                    Author = randomUser,
                     Text = postContent,
                     CreationDate = randomDate,
-                    IsPublished = true,
+                    IsPublished = new Random().Next(0, 2) == 1,
                     PublishDate = randomDate,
                     PostType = postType,
                     PostTypeId = postType.Id,
@@ -136,7 +136,80 @@ namespace MadLab.QueryFilter.Domain
             await appDbContext.SaveChangesAsync();
         }
 
+        public static async Task CreateDemoData(DataBaseContext context)
+        {
+            // Ensure database is created
+            context.Database.EnsureCreated();
 
+
+            bool createMoodTypes = !context.MoodTypes.Any();
+            bool createPostTypes = !context.PostTypes.Any();
+
+            if (createMoodTypes || createPostTypes)
+            {
+                List<string> moodTypes = new List<string> { "Happy", "Sad", "Angry", "Excited" };
+                List<string> postTypes = new List<string> { "Text", "Image", "Video", "Link" };
+                await CreateMoodTypesAndPostTypes(context, createMoodTypes, moodTypes, createPostTypes, postTypes);
+            }
+
+            if (!context.Users.Any())
+            {
+                List<string> dummyNames = new List<string> { "John", "Jane", "Alice", "Bob" };
+                List<string> dummyLastNames = new List<string> { "Doe", "Smith", "Johnson", "Brown" };
+                await CreateDummyUsers(context, 10, dummyNames, dummyLastNames, "yourStrong(!)Password");
+            }
+
+            if (!context.Posts.Any())
+            {
+                List<string> dummyPostTitles = new List<string> { "discover",
+                "amazing",
+                "journey",
+                "future",
+                "create",
+                "ideas",
+                "explore",
+                "challenge",
+                "dream",
+                "inspire",
+                "learn",
+                "share",
+                "moment",
+                "grow",
+                "together",
+                "change",
+                "vision",
+                "success",
+                "believe",
+                "story"
+                };
+
+                List<string> dummyPostContents = new List<string> {
+                    "connect",
+                    "discoveries",
+                    "opportunity",
+                    "motivate",
+                    "focus",
+                    "energy",
+                    "progress",
+                    "community",
+                    "support",
+                    "challenge",
+                    "growth",
+                    "passion",
+                    "goal",
+                    "achievement",
+                    "collaborate",
+                    "imagine",
+                    "reflect",
+                    "advance",
+                    "encourage",
+                    "potential"
+                };
+
+                await CreateDummyPosts(context, 50, dummyPostTitles, dummyPostContents);
+            }
+        }
+        
         internal static string GetRandomStringFromList(IEnumerable<string> list)
         {
             if (list == null || !list.Any())
