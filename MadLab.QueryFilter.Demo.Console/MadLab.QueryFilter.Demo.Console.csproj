@@ -13,6 +13,7 @@
 
   <ItemGroup>
     <ProjectReference Include="..\MadLab.QueryFilter.Domain\MadLab.QueryFilter.Domain.csproj" />
+    <ProjectReference Include="..\MadLab.QueryFilter.Services\MadLab.QueryFilter.Services.csproj" />
   </ItemGroup>
 
 </Project>
