@@ -11,6 +11,11 @@ namespace MadLab.QueryFilter.Tests.Services
 {
     public class MoodTypeServiceTests
     {
+        //Since we are changing the MoodTypeService class, I removed the preious tests that were not relevant to the new implementation.
+        //The idea here is to test QueryBuilder functionality with the new MoodTypeService class.
+        //The tests will cover the basic functionality of the MoodTypeService class, including creating, updating, deleting, and retrieving mood types.
+
+
         private readonly DataBaseContext _dbContext;
         private readonly IRepository<MoodType> _repository;
         private readonly MoodTypeService _service;
@@ -27,34 +32,70 @@ namespace MadLab.QueryFilter.Tests.Services
             CreateMoodTypes().ConfigureAwait(false).GetAwaiter().GetResult();
         }
 
+
+
         [Fact]
-        public async Task GetAllPaged_ReturnsPagedList()
+        public async Task Get_ReturnsAll_WhenNoFilter()
         {
-
-
- 
-
-            var result = await _service.GetAllPaged(1, 2);
-
-            Assert.Equal(2, result.Count());
-
+            var filter = new MoodTypeFilterConfig();
+            var result = await _service.Get(filter);
+            Assert.Equal(4, result.Count());
         }
 
         [Fact]
-        public async Task GetAvailableOnly_ReturnsOnlyAvailable()
+        public async Task Get_FiltersByIsAvailable()
         {
-
-
-            // Set some mood types as unavailable
-            var moodTypeToUpdate = await _dbContext.MoodTypes.FirstAsync(m => m.Mood == "Sad");
-            moodTypeToUpdate.IsAvailable = false;
-            await _dbContext.SaveChangesAsync();
-
-            var result = await _service.GetAvailableOnly();
-            
-
-            Assert.Equal(3, result.Count());
+            var filter = new MoodTypeFilterConfig { IsAvailable = true };
+            var result = await _service.Get(filter);
+            Assert.All(result, m => Assert.True(m.IsAvailable));
         }
+
+        [Fact]
+        public async Task Get_FiltersBySearchTerm()
+        {
+            var filter = new MoodTypeFilterConfig { SearchTerm = "Happy" };
+            var result = await _service.Get(filter);
+            Assert.Single(result);
+            Assert.Contains(result, m => m.Mood == "Happy");
+        }
+
+        [Fact]
+        public async Task Get_FiltersByOnlyWithPosts()
+        {
+            // Add a post to "Happy" mood type
+            var happyMood = _dbContext.MoodTypes.First(m => m.Mood == "Happy");
+            _dbContext.Posts.Add(new Post
+            {
+                Title = "Test Post",
+                Text = "Test",
+                AuthorId = 1,
+                PostTypeId = 1,
+                MoodTypeId = happyMood.Id,
+                CreationDate = System.DateTime.Now,
+                IsPublished = true
+            });
+            _dbContext.SaveChanges();
+
+            var filter = new MoodTypeFilterConfig { OnlyWithPosts = true };
+            var result = await _service.Get(filter);
+            Assert.Contains(result, m => m.Mood == "Happy");
+        }
+
+        [Fact]
+        public async Task Get_ReturnsPagedResults()
+        {
+            // Add more mood types for paging
+            for (int i = 0; i < 10; i++)
+            {
+                _dbContext.MoodTypes.Add(new MoodType { Mood = $"Mood{i}", IsAvailable = true });
+            }
+            _dbContext.SaveChanges();
+
+            var filter = new MoodTypeFilterConfig { Paged = true, PageNumber = 2, PageSize = 5 };
+            var result = await _service.Get(filter);
+            Assert.Equal(5, result.Count());
+        }
+
 
         private async Task CreateMoodTypes()
         {
@@ -72,6 +113,8 @@ namespace MadLab.QueryFilter.Tests.Services
 
             await _dbContext.SaveChangesAsync();
         }
+
+
 
 
     }

@@ -1,6 +1,5 @@
 ﻿
 using Microsoft.EntityFrameworkCore;
-using System;
 
 
 namespace MadLab.QueryFilter.Domain
