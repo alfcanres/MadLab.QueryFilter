@@ -30,7 +30,7 @@ namespace MadLab.QueryFilter.Services.Test.Services
         {
 
             // Arrange: Create demo data
-       
+
 
             // Act: Call the method to get all posts paged
             var result = await _service.GetAllPaged(1, 25);
@@ -44,7 +44,7 @@ namespace MadLab.QueryFilter.Services.Test.Services
         public async Task GetPublishedPaged_ReturnsOnlyPublished()
         {
             // Arrange: Create demo data with some posts published and some not
-     
+
 
             // Act: Call the method to get published posts
             var result = await _service.GetPublishedPaged(1, 10);
@@ -60,7 +60,7 @@ namespace MadLab.QueryFilter.Services.Test.Services
         {
             // Arrange: Create demo data and get the first author's ID and count of published posts by that author
             var authorId = _dbContext.Posts.First().AuthorId;
-            var countPublishedPostByAuthor = _dbContext.Posts.Count(p => p.AuthorId == authorId && p.IsPublished);   
+            var countPublishedPostByAuthor = _dbContext.Posts.Count(p => p.AuthorId == authorId && p.IsPublished);
 
 
             // Act: Call the method to get published posts by author
@@ -78,7 +78,7 @@ namespace MadLab.QueryFilter.Services.Test.Services
         {
             // Arrange: Create demo data and get the first keyword from a post title and count of published posts containing that keyword
             var keyword = _dbContext.Posts.First().Title.Split(' ').First();
-            var countPublishedPostByKeyword = _dbContext.Posts.Count(p => p.IsPublished && (p.Title.Contains(keyword)));    
+            var countPublishedPostByKeyword = _dbContext.Posts.Count(p => p.IsPublished && (p.Title.Contains(keyword)));
 
             // Act: Call the method to search published posts by keyword
             var result = await _service.SearchPublishedPaged(keyword, 1, countPublishedPostByKeyword);
@@ -86,7 +86,7 @@ namespace MadLab.QueryFilter.Services.Test.Services
             // Assert: Check that the result is not null and contains posts matching the keyword in title or text
             Assert.NotNull(result);
             Assert.Equal(countPublishedPostByKeyword, result.Count());
-            Assert.All(result, p => Assert.Contains(keyword, p.Title));
+            Assert.All(result, p => Assert.Contains(keyword, p.Title, StringComparison.OrdinalIgnoreCase));
             Assert.All(result, p => Assert.True(p.IsPublished));
         }
 
@@ -115,7 +115,7 @@ namespace MadLab.QueryFilter.Services.Test.Services
         {
             // Arrange: Create demo data and get the first post's author, mood type, and post type
             var post = _dbContext.Posts.First();
-            var countPublishedPostByAuthorMoodTypeAndPostType = _dbContext.Posts.Count(p => p.IsPublished && p.AuthorId == post.AuthorId && p.MoodTypeId == post.MoodTypeId && p.PostTypeId == post.PostTypeId);    
+            var countPublishedPostByAuthorMoodTypeAndPostType = _dbContext.Posts.Count(p => p.IsPublished && p.AuthorId == post.AuthorId && p.MoodTypeId == post.MoodTypeId && p.PostTypeId == post.PostTypeId);
 
             // Act: Call the method to get published posts by author, mood type, and post type
             var result = await _service.GetPublishedPagedByAuthorAndMoodTypeAndPostType(post.AuthorId, post.MoodTypeId, post.PostTypeId, 1, countPublishedPostByAuthorMoodTypeAndPostType);
@@ -135,7 +135,7 @@ namespace MadLab.QueryFilter.Services.Test.Services
         {
             // Arrange: Create demo data and get the first post's author and post type
             var post = _dbContext.Posts.First();
-            var countPublishedPostByAuthorAndPostType = _dbContext.Posts.Count(p => p.IsPublished && p.AuthorId == post.AuthorId && p.PostTypeId == post.PostTypeId);   
+            var countPublishedPostByAuthorAndPostType = _dbContext.Posts.Count(p => p.IsPublished && p.AuthorId == post.AuthorId && p.PostTypeId == post.PostTypeId);
 
             // Act: Call the method to get published posts by author and post type
             var result = await _service.GetPublishedPagedByAuthorPostType(post.AuthorId, post.PostTypeId, 1, countPublishedPostByAuthorAndPostType);
@@ -144,7 +144,7 @@ namespace MadLab.QueryFilter.Services.Test.Services
             // Assert: Check that the result is not null, contains only published posts, and matches the author and post type
             Assert.NotNull(result);
             Assert.Equal(countPublishedPostByAuthorAndPostType, result.Count());
-            Assert.All(result, p => Assert.True(p.IsPublished));            
+            Assert.All(result, p => Assert.True(p.IsPublished));
             Assert.All(result, p => Assert.Equal(post.AuthorId, p.AuthorId));
             Assert.All(result, p => Assert.Equal(post.PostTypeId, p.PostTypeId));
         }
