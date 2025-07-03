@@ -1,108 +1,92 @@
 # MadLab.QueryFilter: Dynamic Query Filtering for EF Core
 
-## Overview
 
-**MadLab.QueryFilter** is a lightweight C# library designed to make dynamic filtering of Entity Framework Core (EF Core) queries clean, modular, and maintainable. Using the Decorator Pattern, it enables developers to stack and compose query filters at runtime, supporting a scalable repository and service architecture. It natively supports SQLite but can be adapted to other databases supported by EF Core.
+A modular, maintainable .NET 8 solution for managing and querying entities with advanced filtering and paging. This project demonstrates clean architecture principles using the Repository and QueryBuilder patterns, making it easy to extend and test.
+This is a test project, created as a prove of concept it is not intended to be a full application, as you can see, the only existing UI is a Console app, and it only displays a list of items. If you want to analyze this project your attention should be mainly focused on the MadLab.QueryFilter.Services.Test project and MadLab.QueryFilter.Services project.
 
----
+## General Idea
+We are developing a blog app (Yes, again!! I can see your eyes rolling), where users can post their thoughts, every Post can be part of two main cateogires "Mood" and "Type" and every Post can be voted or commented by other authors. It is intended to be simple so we can focus on the way we are going to work with the decorator pattern. We are using QLite as a data source for simplicity and portability. 
 
-## Why Use MadLab.QueryFilter?
 
-In typical EF Core projects, applying dynamic filters (such as user-selected search criteria) often leads to large, hard-to-maintain queries with many conditional statements. MadLab.QueryFilter solves this by letting you define small, reusable filter components that can be combined at runtime—making complex query logic easier to manage, test, and extend.
+## Features
 
----
+- **Advanced querying** with composable filters (by author, mood, post type, date range, keyword, etc.)
+- **Paging support** for all list queries
+- **Separation of concerns** via DTOs and repository abstraction
+- **Unit tests** for all service methods
 
-## Key Concepts
+## Architecture
 
-### 1. The Decorator Pattern
+- **Repository Pattern:** Abstracts data access, enabling easy swapping of data sources and simplifying testing.
+- **Decorator Pattern:** Allows fluent, reusable composition of queries with filters and paging.
+- **Filter Classes:** Encapsulate query logic for each filter (e.g., `FilterByIsPublished`, `FilterByAuthor`), implementing a common interface.
 
-MadLab.QueryFilter leverages the Decorator Pattern, meaning each filter "wraps" a query and can add its own filtering logic. This approach allows you to:
+## Example Usage
 
-- Add or remove filters dynamically
-- Compose multiple filters together
-- Keep filter logic isolated and reusable
+Let's say you have the following service methods to retrieve posts
+```
+        public async Task<IEnumerable<PostListDTO>> GetPublishedPagedByAuthorAndMoodTypeAndPostType(int authorId, int moodType, int postType, int currentPage, int pageSize)
+        {
+            
+            var result = await _postRepository.Query()
+                        .Include(p => p.Author)
+                        .Include(p => p.PostType)
+                        .Include(p => p.MoodType)
+                        .Where(p => p.AuthorId == authorId && p.MoodTypeId == moodType && p.PostTypeId == postType && p.IsPublished)
+                        .AsNoTracking()
+                        .ToListAsync();
 
-### 2. Clean Repository and Service Architecture
 
-The library encourages separating concerns through repositories (for data access) and services (for business logic), making your codebase more maintainable and testable.
+            return ConvertToDto(result);
+        }
 
-### 3. EF Core and SQLite
+        public async Task<IEnumerable<PostListDTO>> GetPublishedPagedByAuthorPostType(int authorId, int postType, int currentPage, int pageSize)
+        {
+            var result = await _postRepository.Query()
+                        .Include(p => p.Author)
+                        .Include(p => p.PostType)
+                        .Include(p => p.MoodType)
+                        .Where(p => p.AuthorId == authorId && p.PostTypeId == postType && p.IsPublished)
+                        .AsNoTracking()
+                        .ToListAsync();
 
-The library is built for EF Core, using LINQ expressions for filtering, and includes support for SQLite, which is ideal for lightweight and embedded scenarios.
 
----
-
-## How to Use MadLab.QueryFilter
-
-### Prerequisites
-
-- Basic understanding of C# and .NET
-- Familiarity with Entity Framework Core, including DbContext and IQueryable
-- Knowledge of LINQ expressions
-- (Optional) Understanding of the Repository and Service patterns
-
-### 1. Install the Library
-
-Assuming the package is published on NuGet:
-
-```shell
-dotnet add package MadLab.QueryFilter
+            return ConvertToDto(result);
+        }
 ```
 
-### 2. Define Your Filters
+As you can see, we are repeating some filters, what if can create filters and re use them?, and convert that code into this?:
+```
+        public async Task<IEnumerable<PostListDTO>> GetPublishedPagedByAuthorAndMoodTypeAndPostType(int authorId, int moodType, int postType, int currentPage, int pageSize)
+        {
+            _queryBuilder
+                .AddFilter(new FilterByIsPublished(true))
+                .AddFilter(new FilterByAuthor(authorId))
+                .AddFilter(new FilterByMoodType(moodType))
+                .AddFilter(new FilterByPostType(postType))
+                .AddPaging(currentPage, pageSize);
 
-Create filter classes implementing a shared interface (usually something like `IQueryFilter<T>`), each adding its own logic to the query:
+            IEnumerable<Post> result = await _queryBuilder.Build();
 
-```csharp name=ProductCategoryFilter.cs
-public class ProductCategoryFilter : IQueryFilter<Product>
-{
-    private readonly string _category;
+            return ConvertToDto(result);
+        }
 
-    public ProductCategoryFilter(string category)
-    {
-        _category = category;
-    }
+        public async Task<IEnumerable<PostListDTO>> GetPublishedPagedByAuthorPostType(int authorId, int postType, int currentPage, int pageSize)
+        {
+            _queryBuilder
+                .AddFilter(new FilterByIsPublished(true))
+                .AddFilter(new FilterByAuthor(authorId))
+                .AddFilter(new FilterByPostType(postType))
+                .AddPaging(currentPage, pageSize);
 
-    public IQueryable<Product> Apply(IQueryable<Product> query)
-    {
-        return query.Where(p => p.Category == _category);
-    }
-}
+            IEnumerable<Post> result = await _queryBuilder.Build();
+
+            return ConvertToDto(result);
+        }
 ```
 
-### 3. Compose Filters at Runtime
+With this approach, we can add or remove filters, but also the code is more readable, and if for any reason we need to create a new "Get" method we can re use any filter we already created. 
 
-In your repository or service, build up a list of filters based on the user's input:
-
-```csharp name=ProductRepository.cs
-public IQueryable<Product> GetFilteredProducts(IEnumerable<IQueryFilter<Product>> filters)
-{
-    IQueryable<Product> query = _context.Products;
-
-    foreach (var filter in filters)
-    {
-        query = filter.Apply(query);
-    }
-
-    return query;
-}
-```
-
-### 4. Using in Practice
-
-Suppose you want to filter products by both category and price range:
-
-```csharp name=UsageExample.cs
-var filters = new List<IQueryFilter<Product>>
-{
-    new ProductCategoryFilter("Books"),
-    new ProductPriceRangeFilter(minPrice: 10, maxPrice: 50)
-};
-
-var products = repository.GetFilteredProducts(filters).ToList();
-```
-
----
 
 ## What Do I Need to Understand to Use This Library?
 
@@ -119,6 +103,10 @@ var products = repository.GetFilteredProducts(filters).ToList();
 4. **C# Interfaces and Generics**
    - Implementing and using interfaces (e.g., `IQueryFilter<T>`)
    - Using generics for reusable components
+   
+ 5. **C# Unit testing**
+   - All examples are contianed in a test project. So if you want to understand what is going on, you will need to run and maybe debug some tests. Maybe even create your own
+
 
 ---
 
