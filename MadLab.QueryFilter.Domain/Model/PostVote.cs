@@ -1,10 +1,4 @@
-﻿using System;
-using System.Collections.Generic;
-using System.ComponentModel.DataAnnotations;
-using System.ComponentModel.DataAnnotations.Schema;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
+﻿using System.ComponentModel.DataAnnotations;
 
 namespace MadLab.QueryFilter.Domain
 {
@@ -14,9 +8,9 @@ namespace MadLab.QueryFilter.Domain
         public int PostId { get; set; }
         [Required]
         public Post Post { get; set; }
-        public int ApplicationUserInfoId { set; get; }
+        public int UserId { set; get; }
         [Required]
-        public User ApplicationUserInfo { get; set; }
+        public User User { get; set; }
         [Required]
         public bool ILikedThis { get; set; }
         [Required]

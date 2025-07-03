@@ -8,9 +8,9 @@ namespace MadLab.QueryFilter.Domain
         public int PostId { get; set; }
         [Required]
         public Post Post { get; set; }
-        public int ApplicationUserInfoId { set; get; }
+        public int UserId { set; get; }
         [Required]
-        public User ApplicationUserInfo { get; set; }
+        public User User{ get; set; }
         [Required]
         public DateTime CommentDate { set; get; }
 

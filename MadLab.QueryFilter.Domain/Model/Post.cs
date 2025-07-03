@@ -1,17 +1,12 @@
-﻿using System;
-using System.Collections.Generic;
-using System.ComponentModel.DataAnnotations;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
+﻿using System.ComponentModel.DataAnnotations;
 
 namespace MadLab.QueryFilter.Domain
 {
     public class Post
     {
         public int Id { get; set; }
-        public int ApplicationUserInfoId { set; get; }
-        public User ApplicationUserInfo { get; set; }
+        public int AuthorId { set; get; }
+        public User Author { get; set; }
 
         public int PostTypeId { get; set; }
         [Required]

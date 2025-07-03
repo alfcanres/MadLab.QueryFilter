@@ -8,3 +8,7 @@
 /MadLab.QueryFilter.Domain/obj
 /.vs/MadLab.QueryFilter/v17
 /.vs
+/MadLab.QueryFilter.Services/obj
+/MadLab.QueryFilter.Services/bin/Debug/net8.0
+/MadLab.QueryFilter.Services.Test
+*.bin

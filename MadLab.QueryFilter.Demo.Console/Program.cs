@@ -1,101 +1,53 @@
 ﻿// See https://aka.ms/new-console-template for more information
 
 using MadLab.QueryFilter.Domain;
-using Microsoft.EntityFrameworkCore;
+
+using MadLab.QueryFilter.Domain.Repository;
+using MadLab.QueryFilter.Services.Services;
 
 
 string connectionString = "Data Source=SimpleBlog.db";
 
 using (var context = new DataBaseContext(connectionString))
 {
-   
+    await DbInitializer.CreateDemoData(context);
 
-    await CreateDummyData(context); 
+    // Set up repository and service
+    var postRepository = new RepositoryBase<Post>(context);
+    var postService = new PostService(postRepository);
 
+    // Use the service to get all posts paged (first page, 100 posts)
+    var posts = await postService.GetAllPaged(1, 100);
 
-    var list = await context.Posts
-        .ToListAsync();
-
-    foreach (var post in list)
+    // Table header
+    Console.WriteLine(new string('=', 120));
+    Console.WriteLine(
+        $"| # | {"ID",3} | {"Title",-25} | {"Author",-15} | {"Type",-12} | {"Mood",-10} | {"Created",-16} | {"Pub",-3} |");
+    Console.WriteLine(new string('=', 120));
+    int number = 1;
+    // Table rows
+    foreach (var post in posts)
     {
-        Console.WriteLine($"Post ID: {post.Id}, Title: {post.Title}, Content: {post.Text}");
+        var authorName = post.Author ?? "Unknown";
+        var postType = post.PostTypeName ?? "N/A";
+        var moodType = post.MoodTypeName ?? "N/A";
+        var created = post.CreationDate.ToString("yyyy-MM-dd HH:mm");
+        var published = post.IsPublished ? "Yes" : "No";
+
+        Console.WriteLine(
+            $"| {number} | {post.Id,3} | {Truncate(post.Title, 25),-25} | {Truncate(authorName, 15),-15} | {Truncate(postType, 12),-12} | {Truncate(moodType, 10),-10} | {created,-16} | {published,3} |");
+
+        number++;
     }
 
-
+    Console.WriteLine(new string('=', 120));
+    Console.WriteLine("End of posts. Press Enter to exit.");
     Console.ReadLine();
 }
 
-
-async Task CreateDummyData(DataBaseContext context)
+// Helper to truncate strings safely
+static string Truncate(string value, int maxLength)
 {
-    // Ensure database is created
-    context.Database.EnsureCreated();
-
-
-
-    bool createMoodTypes = !context.MoodTypes.Any();
-    bool createPostTypes = !context.PostTypes.Any();
-
-    if (createMoodTypes || createPostTypes)
-    {
-        List<string> moodTypes = new List<string> { "Happy", "Sad", "Angry", "Excited" };
-        List<string> postTypes = new List<string> { "Text", "Image", "Video", "Link" };
-        await DbInitializer.CreateMoodTypesAndPostTypes(context, createMoodTypes, moodTypes, createPostTypes, postTypes);
-    }
-
-    if (!context.Users.Any())
-    {
-        List<string> dummyNames = new List<string> { "John", "Jane", "Alice", "Bob" };
-        List<string> dummyLastNames = new List<string> { "Doe", "Smith", "Johnson", "Brown" };
-        await DbInitializer.CreateDummyUsers(context, 10, dummyNames, dummyLastNames, "yourStrong(!)Password");
-    }
-
-    if (!context.Posts.Any())
-    {
-        List<string> dummyPostTitles = new List<string> { "discover",
-        "amazing",
-        "journey",
-        "future",
-        "create",
-        "ideas",
-        "explore",
-        "challenge",
-        "dream",
-        "inspire",
-        "learn",
-        "share",
-        "moment",
-        "grow",
-        "together",
-        "change",
-        "vision",
-        "success",
-        "believe",
-        "story" 
-        };
-        
-        List<string> dummyPostContents = new List<string> {         
-        "connect",
-        "discoveries",
-        "opportunity",
-        "motivate",
-        "focus",
-        "energy",
-        "progress",
-        "community",
-        "support",
-        "challenge",
-        "growth",
-        "passion",
-        "goal",
-        "achievement",
-        "collaborate",
-        "imagine",
-        "reflect",
-        "advance",
-        "encourage",
-        "potential" };
-
-        await DbInitializer.CreateDummyPosts(context, 250, dummyPostTitles, dummyPostContents);
-    }
+    if (string.IsNullOrEmpty(value)) return "";
+    return value.Length <= maxLength ? value : value.Substring(0, maxLength - 3) + "...";
 }
