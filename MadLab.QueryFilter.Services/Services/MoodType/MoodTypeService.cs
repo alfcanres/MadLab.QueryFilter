@@ -1,10 +1,14 @@
 ﻿using MadLab.QueryFilter.Domain;
 using MadLab.QueryFilter.Domain.Repository;
 using MadLab.QueryFilter.Services.Dto.MoodType;
+using MadLab.QueryFilter.Services.Helpers;
+using MadLab.QueryFilter.Services.MoodTypeFilters;
 using Microsoft.EntityFrameworkCore;
 
 namespace MadLab.QueryFilter.Services.Services
 {
+
+
     /// <summary>
     /// Provides functionality for managing mood types, including creating, updating, deleting,  and retrieving mood
     /// types. This service supports operations for both paginated and filtered  retrieval of mood types.
@@ -20,9 +24,17 @@ namespace MadLab.QueryFilter.Services.Services
     public class MoodTypeService : IMoodTypeService
     {
         private readonly IRepository<MoodType> _moodTypeRepository;
+        private readonly IQueryable<MoodType> _moodTypesQuery;
+        private readonly QueryBuilder<MoodType> _queryBuilder;
         public MoodTypeService(IRepository<MoodType> moodTypeRepository)
         {
             _moodTypeRepository = moodTypeRepository;
+
+            _moodTypesQuery = _moodTypeRepository.Query()
+                .Include(t => t.Posts)
+                .AsNoTracking();
+
+            _queryBuilder = new QueryBuilder<MoodType>(_moodTypesQuery);
         }
 
         public async Task CreateMoodType(MoodTypeCreateDTO crate)
@@ -36,7 +48,7 @@ namespace MadLab.QueryFilter.Services.Services
             await _moodTypeRepository.AddAsync(moodType);
 
         }
-        
+
         public async Task UpdateMoodType(MoodTypeEdit update)
         {
             var moodType = await _moodTypeRepository.GetByIdAsync(update.Id);
@@ -65,51 +77,51 @@ namespace MadLab.QueryFilter.Services.Services
             };
         }
 
-        public async Task<IEnumerable<MoodTypeListDTO>> GetAllPaged(int currentPage, int pageSize)
+
+        //Now remember we used to have two methods for getting mood types, one for getting all available mood types and another for getting paginated mood types.
+        // We got rid of these methods, because we can use the Get method with a filter configuration to achieve the same functionality.
+        // This is another approach to simplify the service and make it more flexible.
+        // I don't personaly like this that much since we can end up adding to much complexity to a single method,
+        // however I think it is a good exercise to show how we can use the QueryBuilder to filter and paginate the results.
+
+        public async Task<IEnumerable<MoodTypeListDTO>> Get(MoodTypeFilterConfig filterConfig)
         {
 
 
-            //If you are thinking about performance, you can use AsNoTracking() to improve performance when you don't need to track changes to the entities.
-            //I'm not using it here to keep the code simple, but you can add it if you want.
-            //Also notice there is code duplication when selecting the MoodTypeListDTO, but I wanted to keep the code simple and focused on the core functionality of managing mood types.
-            //However, you can create a private method to handle the mapping if you want to avoid code duplication, or even use a library like AutoMapper to handle the mapping for you.
+            if(filterConfig.IsAvailable.HasValue)
+            {
+                _queryBuilder.AddFilter(new FilterByIsAvailable(filterConfig.IsAvailable.Value));
+            }
 
 
-            int skipCount = (currentPage - 1) * pageSize;
+            if (!string.IsNullOrEmpty(filterConfig.SearchTerm))
+            {
+                _queryBuilder.AddFilter(new FilterBySearchTerm(filterConfig.SearchTerm));
+            }
 
 
-            var pagedMoodTypes = await _moodTypeRepository.Query()
-                .OrderBy(m => m.Id)
-                .Skip(skipCount)
-                .Take(pageSize)
-                .Select(m => new MoodTypeListDTO
-                {
-                    Id = m.Id,
-                    Mood = m.Mood,
-                    IsAvailable = m.IsAvailable
-                }).ToListAsync();
+            if (filterConfig.OnlyWithPosts)
+            {
+                _queryBuilder.AddFilter(new FilterByOnlyWithPosts());
+            }
 
 
-            return pagedMoodTypes;
-        }
-
-        public async Task<IEnumerable<MoodTypeListDTO>> GetAvailableOnly()
-        {
-            
-            var availableMoodTypes = await _moodTypeRepository.Query()
-                .Where(m => m.IsAvailable)
-                .Select(m => new MoodTypeListDTO
-                {
-                    Id = m.Id,
-                    Mood = m.Mood,
-                    IsAvailable = m.IsAvailable
-                }).ToListAsync();
+            if (filterConfig.Paged)
+            {
+                _queryBuilder.AddPaging(filterConfig.PageNumber, filterConfig.PageSize);
+            }
 
 
-            return availableMoodTypes;
+
+            var result = await _queryBuilder.Build();
+
+            return result.Select(m => new MoodTypeListDTO
+            {
+                Id = m.Id,
+                Mood = m.Mood,
+                IsAvailable = m.IsAvailable
+            }).ToList();
 
         }
-
-
     }
 }
